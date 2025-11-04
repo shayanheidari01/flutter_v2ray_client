@@ -21,6 +21,7 @@ import dev.amirzr.flutter_v2ray_client.v2ray.V2rayReceiver;
 import dev.amirzr.flutter_v2ray_client.v2ray.utils.AppConfigs;
 import dev.amirzr.flutter_v2ray_client.v2ray.utils.LogcatManager;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -135,6 +136,33 @@ public class FlutterV2rayPlugin implements FlutterPlugin, ActivityAware, PluginR
                                     V2rayController.getV2rayServerDelay(call.argument("config"), call.argument("url")));
                         } catch (Exception e) {
                             result.success(-1);
+                        }
+                    });
+                    break;
+                case "getServersDelayConcurrently":
+                    executor.submit(() -> {
+                        try {
+                            List<String> configs = call.argument("configs");
+                            String url = call.argument("url");
+                            Number maxConcurrencyArg = call.argument("maxConcurrency");
+                            Number timeoutMsArg = call.argument("timeoutMs");
+
+                            int maxConcurrency = maxConcurrencyArg != null ? maxConcurrencyArg.intValue() : 1;
+                            int timeoutMs = timeoutMsArg != null ? timeoutMsArg.intValue() : 3000;
+
+                            if (configs == null) {
+                                result.success(Collections.emptyList());
+                                return;
+                            }
+
+                            List<Integer> delays = V2rayController.getV2rayServersDelayConcurrently(
+                                    configs,
+                                    url != null ? url : "https://google.com/generate_204",
+                                    Math.max(1, maxConcurrency),
+                                    timeoutMs > 0 ? timeoutMs : 3000);
+                            result.success(delays);
+                        } catch (Exception e) {
+                            result.success(Collections.emptyList());
                         }
                     });
                     break;

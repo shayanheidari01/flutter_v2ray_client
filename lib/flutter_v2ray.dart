@@ -111,6 +111,44 @@ class V2ray {
         .getServerDelay(config: config, url: url);
   }
 
+  /// Measures delays to multiple V2Ray servers concurrently using the provided configurations.
+  /// [configs] is a list of V2Ray configurations in JSON format.
+  /// [url] is the server URL to test for delay (default is 'https://google.com/generate_204').
+  /// [maxConcurrency] limits the number of simultaneous measurements (minimum 1).
+  /// [timeoutMs] sets the timeout for each measurement in milliseconds (minimum 1).
+  /// Throws an [ArgumentError] if any config is not valid JSON, or the configs list is empty.
+  /// Returns a [Future] with the delays in milliseconds aligned with [configs].
+  Future<List<int>> getServersDelayConcurrently({
+    required List<String> configs,
+    String url = 'https://google.com/generate_204',
+    int maxConcurrency = 4,
+    int timeoutMs = 3000,
+  }) async {
+    if (configs.isEmpty) {
+      throw ArgumentError('configs must not be empty');
+    }
+
+    for (final config in configs) {
+      try {
+        if (jsonDecode(config) == null) {
+          throw ArgumentError('The provided string is not valid JSON');
+        }
+      } catch (_) {
+        throw ArgumentError('The provided string is not valid JSON');
+      }
+    }
+
+    final safeConcurrency = maxConcurrency < 1 ? 1 : maxConcurrency;
+    final safeTimeout = timeoutMs < 1 ? 1 : timeoutMs;
+
+    return FlutterV2rayPlatform.instance.getServersDelayConcurrently(
+      configs: configs,
+      url: url,
+      maxConcurrency: safeConcurrency,
+      timeoutMs: safeTimeout,
+    );
+  }
+
   /// Measures the delay to the currently connected V2Ray server.
   /// [url] is the server URL to test for delay (default is 'https://google.com/generate_204').
   /// Returns a [Future] that completes with the delay in milliseconds.

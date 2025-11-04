@@ -82,6 +82,23 @@ abstract class FlutterV2rayPlatform extends PlatformInterface {
     throw UnimplementedError('getServerDelay() has not been implemented.');
   }
 
+  /// Measures delays to multiple V2Ray servers concurrently using the provided configurations and URL.
+  /// [configs] is a list of V2Ray configurations in JSON format.
+  /// [url] is the server URL to test.
+  /// [maxConcurrency] limits the number of simultaneous measurements.
+  /// [timeoutMs] specifies the timeout in milliseconds for each measurement.
+  /// Returns a [Future] that completes with the delays in milliseconds, aligned with [configs].
+  Future<List<int>> getServersDelayConcurrently({
+    required List<String> configs,
+    required String url,
+    required int maxConcurrency,
+    required int timeoutMs,
+  }) {
+    throw UnimplementedError(
+      'getServersDelayConcurrently() has not been implemented.',
+    );
+  }
+
   /// Measures the delay to the currently connected V2Ray server.
   /// [url] is the server URL to test.
   /// Returns a [Future] that completes with the delay in milliseconds.

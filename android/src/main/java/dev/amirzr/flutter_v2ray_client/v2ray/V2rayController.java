@@ -13,8 +13,14 @@ import dev.amirzr.flutter_v2ray_client.v2ray.utils.AppConfigs;
 import dev.amirzr.flutter_v2ray_client.v2ray.utils.Utilities;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import libv2ray.Libv2ray;
 
@@ -133,6 +139,57 @@ public class V2rayController {
 
     public static long getV2rayServerDelay(final String config, final String url) {
         return V2rayCoreManager.getInstance().getV2rayServerDelay(config, url);
+    }
+
+    public static List<Integer> getV2rayServersDelayConcurrently(final List<String> configs, final String url,
+            final int maxConcurrency, final int timeoutMs) {
+        if (configs == null || configs.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        int workerCount = Math.max(1, maxConcurrency);
+        workerCount = Math.min(workerCount, configs.size());
+        int taskTimeout = timeoutMs > 0 ? timeoutMs : 3000;
+
+        ExecutorService executorService = Executors.newFixedThreadPool(workerCount);
+        List<Integer> delays = new ArrayList<>(Collections.nCopies(configs.size(), -1));
+        List<Future<Integer>> futures = new ArrayList<>(configs.size());
+
+        try {
+            for (int i = 0; i < configs.size(); i++) {
+                final String config = configs.get(i);
+                futures.add(executorService.submit(() -> {
+                    try {
+                        long delay = V2rayCoreManager.getInstance().getV2rayServerDelay(config, url);
+                        if (delay < 0) {
+                            return -1;
+                        }
+                        if (delay > Integer.MAX_VALUE) {
+                            delay = Integer.MAX_VALUE;
+                        }
+                        return (int) delay;
+                    } catch (Exception ignored) {
+                        return -1;
+                    }
+                }));
+            }
+
+            for (int i = 0; i < futures.size(); i++) {
+                Future<Integer> future = futures.get(i);
+                try {
+                    delays.set(i, future.get(taskTimeout, TimeUnit.MILLISECONDS));
+                } catch (TimeoutException e) {
+                    future.cancel(true);
+                    delays.set(i, -1);
+                } catch (Exception e) {
+                    delays.set(i, -1);
+                }
+            }
+        } finally {
+            executorService.shutdownNow();
+        }
+
+        return delays;
     }
 
     public static AppConfigs.V2RAY_CONNECTION_MODES getConnectionMode() {

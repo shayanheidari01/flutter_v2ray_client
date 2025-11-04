@@ -76,6 +76,34 @@ class MethodChannelFlutterV2ray extends FlutterV2rayPlatform {
   }
 
   @override
+  Future<List<int>> getServersDelayConcurrently({
+    required List<String> configs,
+    required String url,
+    required int maxConcurrency,
+    required int timeoutMs,
+  }) async {
+    final List<dynamic>? result =
+        await methodChannel.invokeMethod<List<dynamic>>('getServersDelayConcurrently', {
+      'configs': configs,
+      'url': url,
+      'maxConcurrency': maxConcurrency,
+      'timeoutMs': timeoutMs,
+    });
+
+    if (result == null) {
+      return const [];
+    }
+
+    return result
+        .map((entry) => entry is int
+            ? entry
+            : entry is num
+                ? entry.toInt()
+                : -1)
+        .toList(growable: false);
+  }
+
+  @override
   Future<int> getConnectedServerDelay(String url) async {
     return await methodChannel
         .invokeMethod('getConnectedServerDelay', {'url': url});

@@ -43,6 +43,7 @@ class _HomePageState extends State<HomePage> {
   bool proxyOnly = false;
   final bypassSubnetController = TextEditingController();
   List<String> bypassSubnets = [];
+  final List<String> configBatch = [];
   String? coreVersion;
 
   String remark = "Default Remark";
@@ -99,6 +100,97 @@ class _HomePageState extends State<HomePage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('${delay}ms')));
+  }
+
+  void addConfigToBatch() {
+    final text = config.text.trim();
+    if (text.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Config is empty')),
+      );
+      return;
+    }
+
+    setState(() {
+      configBatch.add(text);
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Added to batch (#${configBatch.length})')),
+    );
+  }
+
+  void clearConfigBatch() {
+    if (configBatch.isEmpty) {
+      return;
+    }
+
+    setState(() => configBatch.clear());
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Batch cleared')),
+    );
+  }
+
+  void measureBatchDelay() async {
+    if (configBatch.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add configs to the batch first')),
+      );
+      return;
+    }
+
+    try {
+      final delays = await flutterV2ray.getServersDelayConcurrently(
+        configs: List<String>.from(configBatch),
+      );
+
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Batch Delay Results'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: delays.length,
+                itemBuilder: (context, index) {
+                  final delay = delays[index];
+                  return Text('Config ${index + 1}: ${delay}ms');
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } on ArgumentError catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.message?.toString() ?? 'Invalid config provided',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $error')),
+      );
+    }
   }
 
   void bypassSubnet() {
@@ -214,6 +306,8 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             const SizedBox(height: 10),
+            Text('Batch configs: ${configBatch.length}'),
+            const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.all(5.0),
               child: Wrap(
@@ -241,6 +335,18 @@ class _HomePageState extends State<HomePage> {
                   ElevatedButton(
                     onPressed: delay,
                     child: const Text('Server Delay'),
+                  ),
+                  ElevatedButton(
+                    onPressed: addConfigToBatch,
+                    child: const Text('Add to Batch'),
+                  ),
+                  ElevatedButton(
+                    onPressed: clearConfigBatch,
+                    child: const Text('Clear Batch'),
+                  ),
+                  ElevatedButton(
+                    onPressed: measureBatchDelay,
+                    child: const Text('Batch Delay (Concurrent)'),
                   ),
                   ElevatedButton(
                     onPressed: bypassSubnet,
