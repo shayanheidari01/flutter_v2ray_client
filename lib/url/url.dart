@@ -116,7 +116,7 @@ abstract class V2RayURL {
 
   /// DNS configuration.
   Map<String, dynamic> dns = {
-    'servers': ['8.8.8.8', '8.8.4.4']
+    'servers': ['1.1.1.1', '1.0.0.1', '8.8.8.8', '8.8.4.4']
   };
 
   /// Routing configuration.
@@ -160,6 +160,8 @@ abstract class V2RayURL {
     'quicSettings': null,
     'realitySettings': null,
     'grpcSettings': null,
+    'xhttpSettings': null, // Add xhttpSettings
+    'httpupgradeSettings': null, // Add httpupgradeSettings
     'dsSettings': null,
     'sockopt': null
   };
@@ -270,6 +272,22 @@ abstract class V2RayURL {
       streamSetting['grpcSettings'] = {
         'serviceName': serviceName ?? '',
         'multiMode': mode == 'multi',
+      };
+      sni = host ?? '';
+    } else if (transport == 'xhttp') {
+      // For xhttp, we'll set up the basic structure
+      // The specific xhttp settings will be populated by the VLESS parser
+      streamSetting['xhttpSettings'] = {
+        'host': host ?? '',
+        'path': path ?? '/',
+        'mode': mode ?? 'auto',
+      };
+      sni = host ?? '';
+    } else if (transport == 'httpupgrade') {
+      // For httpupgrade, we'll set up the basic structure
+      streamSetting['httpupgradeSettings'] = {
+        'host': host ?? '',
+        'path': path ?? '',
       };
       sni = host ?? '';
     }
